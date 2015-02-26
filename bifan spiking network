@@ -1,5 +1,5 @@
 % Created by Eugene M. Izhikevich, February 25, 2003
-% Motif creation and LFP by Gaia Silvestri July 2013
+% Motif creation and LFP calculation by Gaia Silvestri July 2013
 
 % Excitatory neurons    Inhibitory neurons
 Ne=800; % RS
