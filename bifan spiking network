@@ -1,0 +1,109 @@
+% Created by Eugene M. Izhikevich, February 25, 2003
+% Motif creation and LFP by Gaia Silvestri July 2013
+
+% Excitatory neurons    Inhibitory neurons
+Ne=800; % RS
+Ni=200; % FS
+n=1000; % total number of neurons
+totzeros=0;
+runtime = 2000;         % run simulation for runtime ms
+a=[0.02*ones(Ne,1);     0.1*ones(Ni,1)];
+b=[0.2*ones(Ne,1);      0.2*ones(Ni,1)];
+c=[-65*ones(Ne,1);      -65*ones(Ni,1)];
+d=[8*ones(Ne,1);        2*ones(Ni,1)];
+k=0;
+x=0;
+
+%START BY CREATING A MATRIX FILLED WITH ONES 
+S=ones(n,n); %every neuron is connected to every other
+S2=S;        %original S matrix
+
+%change propfour to vary the total number of active synapses in the network
+propfour=0.52; %0.52 to set 65% of active synapses  
+nfourtets=propfour.*(((Ne+Ni).*(Ne+Ni-1))/2); 
+    
+%CREATE BIFAN MOTIFS IN THE NETWORK
+ for i=1:nfourtets                
+     flag = 1; 
+     while flag == 1
+        % for every iteration, pick 4 neurons from the network
+        strt=(n.*rand(1));    
+        next1=(n.*rand(1));
+        next2=(n.*rand(1));
+        last=(n.*rand(1));
+        istrt=cast(strt,'int32');
+        inext1=cast(next1,'int32');
+        inext2=cast(next2,'int32');
+        ilast=cast(last,'int32');   
+        % this produces 4 indexes in range 1-1000 at every loop
+        if istrt==0
+        	istrt=1;  %because we do not have index 0
+        end
+        if inext1==0
+        	inext1=1;
+        end
+        if inext2==0
+        	inext2=1;
+        end
+        if ilast==0
+        	ilast=1;
+        end
+        % make sure we picked 4 different neurons 
+        if istrt == inext2 || istrt == ilast || inext1 == inext2 || inext1 == ilast || istrt == inext1 || inext2 == ilast
+            flag = 1;
+        else
+        	flag = 0;
+        end
+     end  
+        %BIFAN MOTIF CONNECTIVITY: connect the 4 neurons in bifan fashion
+        %multiply excitatory weights by 0.5, make inhibitory weights negative 
+        if istrt > (n-Ni) S(istrt,inext2)=-1.*rand(1,1); else S(istrt,inext2)=0.5*rand(1,1); end
+        if inext1 > (n-Ni) S(inext1,ilast)=-1.*rand(1,1); else S(inext1,ilast)=0.5*rand(1,1); end
+        if inext1 > (n-Ni) S(inext1,inext2)=-1.*rand(1,1); else S(inext1,inext2)=0.5*rand(1,1); end     
+        if istrt > (n-Ni) S(istrt,ilast)=-1.*rand(1,1); else S(istrt,ilast)=0.5*rand(1,1); end
+end    
+   
+%ZERO OUT ANYTHING THAT IS NOT A MOTIF
+for i=1:Ne+Ni
+	for j=1:Ne+Ni
+        if S(i,j) == 1 || S(i,j) == -1  
+        	S(i,j) = 0;
+        	totzeros=totzeros+1;
+        end
+	end
+end
+    
+v=-65*ones(Ne+Ni,1);    % Initial values of v
+u=b.*v;                 % Initial values of u
+firings=[];             % spike timings
+LFP=zeros(runtime,3);
+ADJ=zeros(runtime,n);
+count=0;
+count2=0;
+for t=1:runtime                       % simulation of runtime ms
+  I=[5*randn(Ne,1);2*randn(Ni,1)];    % thalamic input
+  fired=find(v>=30);                  % indices of spikes
+  for jj=1:numel(fired)
+      ADJ(t,fired(jj))=1;             % ms on y axis, neuron index on x axis
+  end
+  firings=[firings; t+0*fired,fired]; % left column is time, right is index of neuron firing out of 1000. 
+  v(fired)=c(fired);
+  u(fired)=u(fired)+d(fired);
+  I=I+sum(S(:,fired),2);
+  v=v+0.5*(0.04*v.^2+5*v+140-u+I); % step 0.5 ms
+  v=v+0.5*(0.04*v.^2+5*v+140-u+I); % for numerical stability
+  u=u+a.*(b.*v-u);                 % update u
+  LFP(t,1)=sum(v(1:Ne,1));         % sum of voltages of excitatory per ms 
+  LFP(t,2)=sum(v((Ne+1):n,1));     % sum of voltages of inhibitory per ms
+  LFP(t,3) = sum(v(:));            % sum of all voltages per ms
+end
+
+%PLOT FIRINGS
+figure(1);
+plot(firings(:,1),firings(:,2),'.'); 
+title('Spike raster - RS,FS no plasticity with motifs');
+%PLOT LFP
+figure(2);
+plot(LFP);
+legend('all','inhibitory','excitatory');
+title('LFP - RS,FS no plasticity with motifs');
