@@ -83,9 +83,6 @@ count2=0;
 for t=1:runtime                       % simulation of runtime ms
   I=[5*randn(Ne,1);2*randn(Ni,1)];    % thalamic input
   fired=find(v>=30);                  % indices of spikes
-  for jj=1:numel(fired)
-      ADJ(t,fired(jj))=1;             % ms on y axis, neuron index on x axis
-  end
   firings=[firings; t+0*fired,fired]; % left column is time, right is index of neuron firing out of 1000. 
   v(fired)=c(fired);
   u(fired)=u(fired)+d(fired);
